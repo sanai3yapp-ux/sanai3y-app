@@ -1,0 +1,24 @@
+Sanai3y - Final Test Build
+
+Main fixes:
+1. Technician completion refreshes the authoritative order before complete_order.
+2. Completion requires paid + remaining_amount <= 0 + admin_completion_payment_confirmed_at.
+3. complete_order creates the technician payout from technician_net_amount.
+4. Technician logout returns to AccountTypePage instead of Navigator.pop/blank page.
+5. Customer PIN is 6 digits in registration and login.
+6. customer-auth deployed as version 5; login now checks the actual Auth email linked to customers.user_id plus supported legacy email/password formats.
+7. Supabase Edge Function source is included under supabase/functions/customer-auth/index.ts.
+
+Test order #3:
+- Before testing, it should be accepted, paid, remaining 0, and admin payment confirmation present.
+- Press technician "تم تنفيذ الطلب وإنهاء الخدمة".
+- Expected: order becomes completed and technician payout is 90 EGP.
+- Open technician payouts: expected payout is 90 EGP.
+
+Customer test:
+- Register with Egyptian phone + 6-digit PIN.
+- Logout.
+- Login with same phone + same 6-digit PIN.
+- Expected: customer home opens, no 401.
+
+Do not add service_role keys to source control. The deployed Edge Function uses the Supabase secret configured in the project environment.

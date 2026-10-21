@@ -1,0 +1,59 @@
+name: Deploy to TestFlight (Apple Developer Account)
+
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: 'TestFlight What to Test notes'
+        required: false
+        default: 'Sanai3y iOS automated build'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-testflight:
+    name: Build & Upload to TestFlight
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Configure Supabase
+        run: |
+          if [ -n "${{ secrets.SUPABASE_LOCAL_JSON }}" ]; then
+            echo '${{ secrets.SUPABASE_LOCAL_JSON }}' > supabase.local.json
+          elif [ ! -f "supabase.local.json" ]; then
+            echo '{"SUPABASE_URL":"https://oflqzgnbpbufoxzynaoq.supabase.co","SUPABASE_PUBLISHABLE_KEY":"sb_publishable_FwtdXZHRA0k-mEIzUO20lA_RBbNo_Gu"}' > supabase.local.json
+          fi
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Check Apple Developer Secrets
+        run: |
+          if [ -z "${{ secrets.APP_STORE_CONNECT_KEY_ID }}" ]; then
+            echo "⚠️ APP_STORE_CONNECT_KEY_ID secret is not set yet."
+            echo "Add your Apple Developer App Store Connect API keys in GitHub Secrets to activate automated TestFlight uploads."
+            exit 1
+          fi
+
+      - name: Build IPA for App Store
+        run: |
+          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist --dart-define-from-file=supabase.local.json
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: 'build/ios/ipa/*.ipa'
+          issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          api-key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          api-private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}

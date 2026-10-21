@@ -1,0 +1,99 @@
+name: Build & Package iOS App (IPA)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release Tag (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Verify Flutter Installation
+        run: flutter --version
+
+      - name: Configure Supabase Secrets
+        run: |
+          if [ -n "${{ secrets.SUPABASE_LOCAL_JSON }}" ]; then
+            echo '${{ secrets.SUPABASE_LOCAL_JSON }}' > supabase.local.json
+            echo "Loaded supabase.local.json from repository secret."
+          elif [ -f "supabase.local.json" ]; then
+            echo "Using existing repository supabase.local.json configuration."
+          else
+            echo '{"SUPABASE_URL":"https://oflqzgnbpbufoxzynaoq.supabase.co","SUPABASE_PUBLISHABLE_KEY":"sb_publishable_FwtdXZHRA0k-mEIzUO20lA_RBbNo_Gu"}' > supabase.local.json
+            echo "Created default fallback supabase.local.json."
+          fi
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build iOS Application (Release Mode)
+        run: |
+          flutter build ios --release --no-codesign --dart-define-from-file=supabase.local.json
+
+      - name: Package Application into IPA File
+        run: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -r -9 sanai3y.ipa Payload
+          ls -lh sanai3y.ipa
+
+      - name: Upload IPA Artifact to Workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: sanai3y-ios-ipa
+          path: sanai3y.ipa
+          retention-days: 30
+
+      - name: Generate Release Tag & Name
+        id: release_info
+        run: |
+          TAG_NAME="${{ github.event.inputs.release_tag || format('v1.0.0-build.{0}', github.run_number) }}"
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release & Upload IPA Download Link
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/heads/')
+        with:
+          tag_name: ${{ steps.release_info.outputs.tag_name }}
+          name: "Sanai3y iOS App - ${{ steps.release_info.outputs.tag_name }}"
+          body: |
+            ### 📱 تطبيق صنايعي لنظام iOS (Sanai3y App)
+            
+            تم بناء التطبيق وتغليفه تلقائياً بصيغة **IPA** جاهز للتحميل والتثبيت على أجهزة iPhone.
+            
+            #### 📥 رابط التحميل المباشر:
+            - قم بتحميل ملف **`sanai3y.ipa`** المرفق أسفل هذا الإصدار.
+            
+            #### 🛠 خطوات التثبيت السريع على الآيفون (بدون اشتراك مطور عبر Sideloadly):
+            1. قم بتحميل برنامج **Sideloadly** المجاني على جهاز الكمبيوتر (ويندوز) من: https://sideloadly.io
+            2. وصّل الآيفون بالكمبيوتر عبر كابل USB ووافق على "الوثوق بهذا الكمبيوتر" (Trust This Computer).
+            3. اسحب ملف `sanai3y.ipa` المرفق وأفلته داخل نافذة Sideloadly.
+            4. اكتب حساب Apple ID العادي الخاص بك ثم اضغط **Start**.
+            5. خلال دقيقة سيظهر تطبيق «صنايعي» على شاشة الآيفون.
+            6. في الآيفون، افتح: **الإعدادات (Settings) > عام (General) > إدارة الجهاز وVPN (VPN & Device Management)**، ثم اضغط على حسابك واضغط **وثوق (Trust)**.
+            
+            ✨ سيعمل التطبيق بكامل وظائفه ويتصل بقاعدة بيانات Supabase مباشرة!
+          files: sanai3y.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,12 @@
+Sanai3y Admin Dashboard update
+
+- Customers are shown as numbered cards (#1, #2, ...).
+- Technicians are shown as detailed numbered cards.
+- Profession cards show the number of technicians and open a details sheet.
+- Profession membership uses technician_professions plus the legacy profession_id.
+- Services UI is prepared but the current connected database has no public services table,
+  so no service names were invented.
+- Supabase RLS policies were applied for active admins to read technicians and
+  technician_professions.
+
+Project paths/routes were not changed.

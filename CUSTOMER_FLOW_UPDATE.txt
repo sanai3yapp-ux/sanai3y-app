@@ -1,0 +1,21 @@
+Sanai3y Customer Flow Update
+
+Starting point: after the existing login/account creation flow. Auth/Login/PIN/Account Type files were not changed.
+
+Implemented customer flow changes:
+- Customer chooses a profession directly; there is no service-selection screen.
+- Order creation starts immediately after profession selection.
+- No GPS, location permission, latitude/longitude, or distance calculation in the customer order flow.
+- Customer enters a three-part name, optional secondary phone, one detailed address field, problem description, optional photos, requested time window (from/to), and materials preference.
+- Request is created for the selected profession using create_customer_order_v3 and is intended to be distributed to technicians by the backend.
+- Attachments use the existing customer-order-attachments storage flow and append_customer_order_attachments RPC.
+- Customer can view offers, compare labor price, inspection status, materials capability, and technician availability window.
+- Selecting an offer starts the 7-minute selection/payment deadline supplied by the backend.
+- Payment review and contact release remain controlled by backend/admin RPCs; customer UI does not treat payment notice as proof of payment.
+- Payment UI shows InstaPay 01069897758 and wallet 01505013234.
+- Full payment customer fee is displayed as 7% (minimum 15 EGP); partial payment customer fee is displayed as 10% of full labor value (minimum 15 EGP). The partial-payment minimum itself remains backend-controlled through partial_required.
+- Technician flow file was left intact because it already uses the v3 offer flow with up to 3 revisions and alternative availability windows.
+
+Important:
+- This project archive does not contain Supabase SQL/migrations. The Flutter code therefore uses the existing v3 RPC/table contracts already present in the project flow. Backend schema/RLS changes must be applied separately from the authoritative SQL when provided.
+- Flutter SDK is not installed in this execution environment, so flutter analyze could not be run here. The modified customer_home_page.dart was checked for Dart delimiter/syntax-structure balance after the edits.
